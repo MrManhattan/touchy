@@ -2,6 +2,7 @@ package com.app.poke.poke;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Vibrator;
 import android.support.wearable.view.WatchViewStub;
 import android.view.View;
 import android.widget.Button;
@@ -27,6 +28,14 @@ public class MainActivityWear extends Activity {
                     @Override
                     public void onClick(View v) {
                         mTextView.setText("Guling guling kom nu lilla fuling!");
+
+                        //Get vibrator service
+                        Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+
+                        //Vibrate method needs a pattern and to reapeat number ( -1 = no repeat)
+                        long[] vibrationPattern = {0, 1, 100, 400};
+                        int indexInPatternToRepeat = -1;
+                        vibrator.vibrate(vibrationPattern, indexInPatternToRepeat);
                     }
                 });
             }

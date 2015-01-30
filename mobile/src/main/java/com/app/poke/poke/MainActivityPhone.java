@@ -1,9 +1,13 @@
 package com.app.poke.poke;
 
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
 
 
 public class MainActivityPhone extends ActionBarActivity {
@@ -12,8 +16,26 @@ public class MainActivityPhone extends ActionBarActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main_activity_phone);
-    }
 
+        Button btn = (Button)findViewById(R.id.btnNotify);
+        btn.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                int notificationId = 001;
+
+                NotificationCompat.Builder notificationBuilder =
+                        new NotificationCompat.Builder(MainActivityPhone.this)
+                                .setSmallIcon(R.drawable.ic_launcher)
+                                .setContentTitle("Title")
+                                .setContentText("Android Wear Notification");
+
+                NotificationManagerCompat notificationManager =
+                        NotificationManagerCompat.from(MainActivityPhone.this);
+
+                notificationManager.notify(notificationId, notificationBuilder.build());
+            }
+        });
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

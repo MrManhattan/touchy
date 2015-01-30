@@ -20,5 +20,7 @@ public class MainActivityWear extends Activity {
                 mTextView = (TextView) stub.findViewById(R.id.text);
             }
         });
+
+
     }
 }

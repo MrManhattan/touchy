@@ -276,7 +276,9 @@ public class MainActivityPhone extends ActionBarActivity implements GoogleApiCli
                             String msg = "";
                             try {
                                 Bundle data = new Bundle();
+
                                 data.putString("to", "haemp");
+
                                 String id = Integer.toString(msgId.incrementAndGet());
                                 gcm.send(PokeConfig.SENDER_ID + "@gcm.googleapis.com", id, data);
                                 msg = "STAFFAN";

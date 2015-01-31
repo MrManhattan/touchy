@@ -1,44 +1,38 @@
 package com.app.poke.poke;
 
 import android.app.Activity;
-import android.content.BroadcastReceiver;
-import android.nfc.Tag;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Vibrator;
 import android.support.wearable.view.WatchViewStub;
 import android.util.Log;
-import android.util.*;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.PendingResult;
-import com.google.android.gms.common.api.Result;
 import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.wearable.DataApi;
-import com.google.android.gms.*;
-import com.google.android.gms.wearable.DataEvent;
-import com.google.android.gms.wearable.DataEventBuffer;
-import com.google.android.gms.wearable.DataItem;
-import com.google.android.gms.wearable.DataMap;
-import com.google.android.gms.wearable.DataMapItem;
-import com.google.android.gms.wearable.PutDataMapRequest;
-import com.google.android.gms.wearable.PutDataRequest;
+import com.google.android.gms.wearable.MessageApi;
+import com.google.android.gms.wearable.MessageEvent;
+import com.google.android.gms.wearable.NodeApi;
 import com.google.android.gms.wearable.Wearable;
 
-import java.sql.Connection;
+import java.io.IOException;
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 
-import static com.google.android.gms.wearable.DataApi.*;
-
-public class MainActivityWear extends Activity implements GoogleApiClient.ConnectionCallbacks,DataListener,GoogleApiClient.OnConnectionFailedListener{
-
+/**
+ * Created by staefy on 31/01/15.
+ */
+public class MainActivityWear extends Activity implements GoogleApiClient.ConnectionCallbacks,MessageApi.MessageListener,GoogleApiClient.OnConnectionFailedListener {
+    /********** Defines ************/
+    public static final String START_ACTIVITY_PATH = "/start/MainActivity";
+    public static final String TAG = "GCM Android";
+    /********** Globals ************/
     private TextView mTextView;
     public GoogleApiClient mGoogleApiClient;
-    public PutDataMapRequest putDataMapReq;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,15 +40,13 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
         setContentView(R.layout.activity_main_activity_wear);
         final WatchViewStub stub = (WatchViewStub) findViewById(R.id.watch_view_stub);
 
-
-        //Create GAC and test data map
+        //Create GAC
         mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .addApi(Wearable.API)
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
                 .build();
         mGoogleApiClient.connect();
-        testDataMap();
 
 
 
@@ -63,14 +55,26 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
             public void onLayoutInflated(WatchViewStub stub) {
                 mTextView = (TextView) stub.findViewById(R.id.text);
                 Button btnRecord = (Button) stub.findViewById(R.id.btnRecord);
-
                 btnRecord.setOnClickListener(new WatchViewStub.OnClickListener() {
+
                     @Override
                     public void onClick(View v) {
-                        putDataMapReq.getDataMap().putString("meddelande", "Hej changed!");
-                        Date d = new Date();
-                        putDataMapReq.getDataMap().putLong("time", d.getTime());
-                        Wearable.DataApi.putDataItem(mGoogleApiClient, putDataMapReq.asPutDataRequest());
+                        try {
+                            new AsyncTask<Void, Void, String>() {
+
+                                @Override
+                                protected String doInBackground(Void... params) {
+                                    Collection<String> nodes = getNodes();
+                                    String nodeid = nodes.iterator().next();
+                                    Log.d(TAG, "Node id: "+nodeid);
+                                    sendPokeMessage(nodeid);
+                                    return null;
+                                }
+                            }.execute(null, null, null);
+
+                        }catch (Exception e){
+                            Log.d(TAG, e.getMessage());
+                        }
                     }
                 });
             }
@@ -79,33 +83,60 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
 
     }
 
-    // Create a data map and put data in it
-    private void testDataMap() {
-        putDataMapReq = PutDataMapRequest.create("/minData");
-        //putDataMapReq.getDataMap().putString("meddelande","Hej!");
-        Date d = new Date();
-        putDataMapReq.getDataMap().putLong("time", d.getTime());
-        PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
-        //Wearable.DataApi.addListener(mGoogleApiClient, this);
-        PendingResult<DataItemResult> pendingResult =
-                 Wearable.DataApi.putDataItem(mGoogleApiClient, putDataReq);
-        pendingResult.setResultCallback(new ResultCallback<DataItemResult>() {
-            @Override
-            public void onResult(final DataItemResult result) {
-                if(result.getStatus().isSuccess()) {
-                    Log.d("NVM", "Data item set: " + result.getDataItem().getUri());
+    /********** Communicating pokes with phone************/
+    /**
+     *The START_ACTIVITY_PATH is not used and should be removed
+     *sends message between paired devices
+     * @param nodeId
+     * @return
+     */
+    public void sendPokeMessage(String nodeId) {
+        Log.d(TAG, "Inside sendMessage()");
+        Wearable.MessageApi.sendMessage(
+                mGoogleApiClient, nodeId, START_ACTIVITY_PATH, new byte[0]).setResultCallback(
+                new ResultCallback<MessageApi.SendMessageResult>() {
+                    @Override
+                    public void onResult(MessageApi.SendMessageResult sendMessageResult) {
+                        if (!sendMessageResult.getStatus().isSuccess()) {
+                            Log.e(TAG, "Failed to send message with status code: "
+                                    + sendMessageResult.getStatus().getStatusCode());
+                        }
+                    }
                 }
-            }
-        });
+        );
     }
 
+    @Override //Handle the received poke (vibrating etc)
+    public void onMessageReceived(MessageEvent messageEvent) {
+        Log.d(TAG, "MessageEvent: " + messageEvent.getData().toString());
+        //Vibrate device
+        Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+        //Vibrate method needs a pattern and to reapeat number ( -1 = no repeat)
+        long[] vibrationPattern = {0, 1, 100, 400};
+        int indexInPatternToRepeat = -1;
+        vibrator.vibrate(vibrationPattern, indexInPatternToRepeat);
 
+    }
+    /**
+     * Goes through connected devices and returns them
+     * Used in sending message between wearable and phone
+     * @param
+     * @return Collection<String>
+     */
+    private Collection<String> getNodes() {
+        HashSet<String> results = new HashSet<String>();
+        NodeApi.GetConnectedNodesResult nodes =
+                Wearable.NodeApi.getConnectedNodes(mGoogleApiClient).await();
+        for (com.google.android.gms.wearable.Node node : nodes.getNodes()) {
+            results.add(node.getId());
+        }
+        return results;
+    }
 
-
+    @Override
     public void onConnected(Bundle bundle) {
-        Log.d("krattaGAC", "onConnected: ");
-        Wearable.DataApi.addListener(mGoogleApiClient, this);
-
+        Log.d("krattaGAC", "in onConnected");
+        Wearable.MessageApi.addListener(mGoogleApiClient, this);
     }
 
     @Override
@@ -114,42 +145,18 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
     }
 
     @Override
-    public void onDataChanged(DataEventBuffer dataEvents) {
-        for (DataEvent event : dataEvents) {
-            if (event.getType() == DataEvent.TYPE_CHANGED) {
-                // DataItem changed
-                DataItem item = event.getDataItem();
-                if (item.getUri().getPath().compareTo("/minData") == 0) {
-                    DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
-                    //mTextView.setText(Long.toString(dataMap.getLong("time")));
-                    //Get vibrator service
-                    Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-
-                    //Vibrate method needs a pattern and to reapeat number ( -1 = no repeat)
-                    long[] vibrationPattern = {0, 1, 100, 400};
-                    int indexInPatternToRepeat = -1;
-                    vibrator.vibrate(vibrationPattern, indexInPatternToRepeat);
-                }
-            } else if (event.getType() == DataEvent.TYPE_DELETED) {
-                // DataItem deleted
-            }
-        }
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+        Log.d("krattaGAC", "in onConnectionFailed");
     }
     @Override
     protected void onResume() {
         super.onStart();
         mGoogleApiClient.connect();
     }
-
     @Override
     protected void onPause() {
         super.onPause();
         //Wearable.DataApi.removeListener(mGoogleApiClient, this);
         //mGoogleApiClient.disconnect();
-    }
-
-    @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
-
     }
 }

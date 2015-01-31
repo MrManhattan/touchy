@@ -1,3 +1,9 @@
+/**
+ * Created on 30/01/15.
+ *
+ * Takes care of a pushed message from server
+ *
+ */
 package com.app.poke.poke;
 
 import android.app.Activity;

@@ -1,10 +1,14 @@
 package com.app.poke.poke;
 
 import android.content.Context;
+
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
+
+import android.os.Vibrator;
+
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v7.app.ActionBarActivity;
@@ -16,6 +20,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
@@ -23,9 +28,18 @@ import com.google.android.gms.gcm.GoogleCloudMessaging;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataEvent;
+import com.google.android.gms.wearable.DataEventBuffer;
+import com.google.android.gms.wearable.DataItem;
+import com.google.android.gms.wearable.DataMap;
+import com.google.android.gms.wearable.DataMapItem;
+import com.google.android.gms.wearable.Wearable;
 
-public class MainActivityPhone extends ActionBarActivity {
 
+public class MainActivityPhone extends ActionBarActivity implements GoogleApiClient.ConnectionCallbacks,DataApi.DataListener,GoogleApiClient.OnConnectionFailedListener{
     public static final String EXTRA_MESSAGE = "message";
     public static final String PROPERTY_REG_ID = "registration_id";
     private static final String PROPERTY_APP_VERSION = "appVersion";
@@ -40,10 +54,13 @@ public class MainActivityPhone extends ActionBarActivity {
     String regid;
     TextView textView;
 
+    public GoogleApiClient mGoogleApiClient;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main_activity_phone);
+
         context = getApplicationContext();
         textView = (TextView) findViewById(R.id.textView);
 
@@ -59,6 +76,14 @@ public class MainActivityPhone extends ActionBarActivity {
         } else {
             Log.i(TAG, "No valid Google Play Services APK found.");
         }
+
+        //Create GAC and test data map
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addApi(Wearable.API)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .build();
+        mGoogleApiClient.connect();
     }
 
     private boolean checkPlayServices() {
@@ -170,12 +195,6 @@ public class MainActivityPhone extends ActionBarActivity {
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        checkPlayServices();
-    }
-
-    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main_activity_phone, menu);
@@ -223,4 +242,56 @@ public class MainActivityPhone extends ActionBarActivity {
 
         return super.onOptionsItemSelected(item);
     }
+    public void onConnected(Bundle bundle) {
+        Log.d("krattaGAC", "onConnected: ");
+        Wearable.DataApi.addListener(mGoogleApiClient, this);
+
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+
+    }
+
+    @Override
+    public void onDataChanged(DataEventBuffer dataEvents) {
+        //Get vibrator service
+        Vibrator v = (Vibrator) this.getSystemService(Context.VIBRATOR_SERVICE);
+        // Vibrate for 500 milliseconds
+        v.vibrate(500);
+        for (DataEvent event : dataEvents) {
+            if (event.getType() == DataEvent.TYPE_CHANGED) {
+                // DataItem changed
+                DataItem item = event.getDataItem();
+                if (item.getUri().getPath().compareTo("/minData") == 0) {
+                    DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
+                    final TextView textView = (TextView)findViewById(R.id.textView);
+                    textView.setText(dataMap.getString("time"));
+                }
+            } else if (event.getType() == DataEvent.TYPE_DELETED) {
+                // DataItem deleted
+            }
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onStart();
+        mGoogleApiClient.connect();
+        checkPlayServices();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        //Wearable.DataApi.removeListener(mGoogleApiClient, this);
+        //mGoogleApiClient.disconnect();
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+
+    }
+
+
 }

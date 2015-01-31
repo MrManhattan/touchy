@@ -220,7 +220,6 @@ public class MainActivityPhone extends ActionBarActivity
     protected void onPause() {
         Log.i(TAG, "in onPause()");
         super.onPause();
-        mGoogleApiClient.disconnect();
     }
 
     @Override

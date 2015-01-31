@@ -93,22 +93,23 @@ public class GcmIntentService extends IntentService {
                 // This loop represents the service doing some work.
 
                 //Take server message and forward to watch (first node FIXME: more nodes?
-                try {
-                    new AsyncTask<Void, Void, String>() {
-
-                        @Override
-                        protected String doInBackground(Void... params) {
-                            Collection<String> nodes = MainActivityPhone.getNodes();
-                            String nodeid = nodes.iterator().next();
-                            Log.d(TAG, "Node id: "+nodeid);
-                            MainActivityPhone.sendPokedMessage(nodeid);
-                            return null;
-                        }
-                    }.execute(null, null, null);
-
-                }catch (Exception e){
-                    Log.d(TAG, e.getMessage());
-                }
+                Collection<String> nodes = MainActivityPhone.getNodes();
+                String nodeid = nodes.iterator().next();
+                Log.d(TAG, "Node id: "+nodeid);
+                MainActivityPhone.sendPokedMessage(nodeid);
+//                try {
+//                    new AsyncTask<Void, Void, String>() {
+//
+//                        @Override
+//                        protected String doInBackground(Void... params) {
+//
+//                            return null;
+//                        }
+//                    }.execute(null, null, null);
+//
+//                }catch (Exception e){
+//                    Log.d(TAG, e.getMessage());
+//                }
 
                 sendNotification("Poke from: " + extras.getString("to"));
                 Log.i(TAG, "Received: " + extras.toString());

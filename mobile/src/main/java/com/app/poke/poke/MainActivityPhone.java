@@ -267,6 +267,31 @@ public class MainActivityPhone extends ActionBarActivity implements GoogleApiCli
                     DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
                     final TextView textView = (TextView)findViewById(R.id.textView);
                     textView.setText(dataMap.getString("time"));
+
+                    //THE REAL CODE FOR SENDING SOMETHING TO SERVER
+                    new AsyncTask() {
+                        @Override
+                        protected String doInBackground(Void... params) {
+                            String msg = "";
+                            try {
+                                Bundle data = new Bundle();
+                                data.putString("my_message", "Hello World");
+                                data.putString("my_action",
+                                        "com.google.android.gcm.demo.app.ECHO_NOW");
+                                String id = Integer.toString(msgId.incrementAndGet());
+                                gcm.send(PokeConfig.SENDER_ID + "@gcm.googleapis.com", id, data);
+                                msg = "Sent message";
+                            } catch (IOException ex) {
+                                msg = "Error :" + ex.getMessage();
+                            }
+                            return msg;
+                        }
+
+                        @Override
+                        protected void onPostExecute(String msg) {
+                            mDisplay.append(msg + "\n");
+                        }
+                    }.execute(null, null, null);
                 }
             } else if (event.getType() == DataEvent.TYPE_DELETED) {
                 // DataItem deleted

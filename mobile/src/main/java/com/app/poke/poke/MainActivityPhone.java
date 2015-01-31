@@ -279,7 +279,7 @@ public class MainActivityPhone extends ActionBarActivity implements GoogleApiCli
                             String msg = "";
                             try {
                                 Bundle data = new Bundle();
-                                data.putString("my_message", "Hello World");
+                                data.putString("to", "staef");
                                 data.putString("my_action",
                                         "com.google.android.gcm.demo.app.ECHO_NOW");
                                 String id = Integer.toString(msgId.incrementAndGet());

@@ -45,7 +45,7 @@ import com.google.android.gms.wearable.Wearable;
 
 public class MainActivityPhone extends ActionBarActivity implements GoogleApiClient.ConnectionCallbacks,DataApi.DataListener,GoogleApiClient.OnConnectionFailedListener{
     public static final String EXTRA_MESSAGE = "message";
-    public static final String PROPERTY_REG_ID = "registration_id";
+    public static final String PROPERTY_REG_ID = "97987986979";
     private static final String PROPERTY_APP_VERSION = "appVersion";
     private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
 
@@ -267,7 +267,7 @@ public class MainActivityPhone extends ActionBarActivity implements GoogleApiCli
                 if (item.getUri().getPath().compareTo("/minData") == 0) {
                     DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
                     final TextView textView = (TextView)findViewById(R.id.textView);
-                    //textView.setText(dataMap.getLong("time"));
+                    //textView.setText(dataMap.getString("time"));
 
                     //THE REAL CODE FOR SENDING SOMETHING TO SERVER
                     new AsyncTask<Void, Void, String>() {
@@ -277,7 +277,7 @@ public class MainActivityPhone extends ActionBarActivity implements GoogleApiCli
                             try {
                                 Bundle data = new Bundle();
 
-                                data.putString("to", "haemp");
+                                data.putString("to", PokeConfig.TO_ID);
 
                                 String id = Integer.toString(msgId.incrementAndGet());
                                 gcm.send(PokeConfig.SENDER_ID + "@gcm.googleapis.com", id, data);

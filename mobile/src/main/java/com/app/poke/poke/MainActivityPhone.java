@@ -259,10 +259,7 @@ public class MainActivityPhone extends ActionBarActivity implements GoogleApiCli
 
     @Override
     public void onDataChanged(DataEventBuffer dataEvents) {
-        //Get vibrator service
-        Vibrator v = (Vibrator) this.getSystemService(Context.VIBRATOR_SERVICE);
-        // Vibrate for 500 milliseconds
-        v.vibrate(500);
+
         for (DataEvent event : dataEvents) {
             if (event.getType() == DataEvent.TYPE_CHANGED) {
                 // DataItem changed
@@ -280,11 +277,10 @@ public class MainActivityPhone extends ActionBarActivity implements GoogleApiCli
                             try {
                                 Bundle data = new Bundle();
                                 data.putString("to", "staef");
-                                data.putString("my_action",
-                                        "com.google.android.gcm.demo.app.ECHO_NOW");
+
                                 String id = Integer.toString(msgId.incrementAndGet());
                                 gcm.send(PokeConfig.SENDER_ID + "@gcm.googleapis.com", id, data);
-                                msg = "Sent message";
+                                msg = "STAFFAN";
                             } catch (IOException ex) {
                                 msg = "Error :" + ex.getMessage();
                             }

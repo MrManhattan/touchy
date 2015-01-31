@@ -1,7 +1,10 @@
 package com.app.poke.poke;
 
+import android.app.Activity;
+import android.content.ComponentName;
 import android.content.Context;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -11,6 +14,7 @@ import android.os.Vibrator;
 
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
+import android.support.v4.content.WakefulBroadcastReceiver;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -269,7 +273,7 @@ public class MainActivityPhone extends ActionBarActivity implements GoogleApiCli
                     textView.setText(dataMap.getString("time"));
 
                     //THE REAL CODE FOR SENDING SOMETHING TO SERVER
-                    new AsyncTask() {
+                    new AsyncTask<Void, Void, String>() {
                         @Override
                         protected String doInBackground(Void... params) {
                             String msg = "";
@@ -285,11 +289,6 @@ public class MainActivityPhone extends ActionBarActivity implements GoogleApiCli
                                 msg = "Error :" + ex.getMessage();
                             }
                             return msg;
-                        }
-
-                        @Override
-                        protected void onPostExecute(String msg) {
-                            mDisplay.append(msg + "\n");
                         }
                     }.execute(null, null, null);
                 }
@@ -317,6 +316,4 @@ public class MainActivityPhone extends ActionBarActivity implements GoogleApiCli
     public void onConnectionFailed(ConnectionResult connectionResult) {
 
     }
-
-
 }

@@ -58,18 +58,18 @@ import java.util.concurrent.TimeUnit;
 public class GcmIntentService extends IntentService {
     public static final int NOTIFICATION_ID = 1;
     PutDataMapRequest putDataMapReq;
-    GoogleApiClient mGoogleApiClient;
     private NotificationManager mNotificationManager;
     NotificationCompat.Builder builder;
 
     public GcmIntentService() {
         super("GcmIntentService");
-        mGoogleApiClient = ((MainActivityPhone)this.getApplicationContext()).mGoogleApiClient;
+
     }
     public static final String TAG = "GCM Demo";
 
     @Override
     protected void onHandleIntent(Intent intent) {
+       // mGoogleApiClient = ((MainActivityPhone)this.getApplicationContext()).mGoogleApiClient;
         Bundle extras = intent.getExtras();
         GoogleCloudMessaging gcm = GoogleCloudMessaging.getInstance(this);
         // The getMessageType() intent parameter must be the intent you received
@@ -93,7 +93,7 @@ public class GcmIntentService extends IntentService {
                 Date d = new Date();
                 putDataMapReq.getDataMap().putLong("time", d.getTime());
 
-                Wearable.DataApi.putDataItem( mGoogleApiClient, putDataMapReq.asPutDataRequest());
+                Wearable.DataApi.putDataItem( MainActivityPhone.mGoogleApiClient, putDataMapReq.asPutDataRequest());
 
                 sendNotification("Received: " + extras.toString());
                 Log.i(TAG, "Received: " + extras.toString());
@@ -134,7 +134,7 @@ public class GcmIntentService extends IntentService {
         PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
         //Wearable.DataApi.addListener(mGoogleApiClient, this);
         PendingResult<DataApi.DataItemResult> pendingResult =
-                Wearable.DataApi.putDataItem(mGoogleApiClient, putDataReq);
+                Wearable.DataApi.putDataItem(MainActivityPhone.mGoogleApiClient, putDataReq);
         pendingResult.setResultCallback(new ResultCallback<DataApi.DataItemResult>() {
             @Override
             public void onResult(final DataApi.DataItemResult result) {

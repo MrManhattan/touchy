@@ -58,7 +58,7 @@ public class MainActivityPhone extends ActionBarActivity implements GoogleApiCli
     String regid;
     TextView textView;
 
-    public GoogleApiClient mGoogleApiClient;
+    public static GoogleApiClient mGoogleApiClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -267,7 +267,7 @@ public class MainActivityPhone extends ActionBarActivity implements GoogleApiCli
                 if (item.getUri().getPath().compareTo("/minData") == 0) {
                     DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
                     final TextView textView = (TextView)findViewById(R.id.textView);
-                    textView.setText(dataMap.getString("time"));
+                    //textView.setText(dataMap.getLong("time"));
 
                     //THE REAL CODE FOR SENDING SOMETHING TO SERVER
                     new AsyncTask<Void, Void, String>() {

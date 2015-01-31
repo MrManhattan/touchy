@@ -71,14 +71,6 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
                         Date d = new Date();
                         putDataMapReq.getDataMap().putLong("time", d.getTime());
                         Wearable.DataApi.putDataItem(mGoogleApiClient, putDataMapReq.asPutDataRequest());
-
-                        //Get vibrator service
-                        Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-
-                        //Vibrate method needs a pattern and to reapeat number ( -1 = no repeat)
-                        long[] vibrationPattern = {0, 1, 100, 400};
-                        int indexInPatternToRepeat = -1;
-                        vibrator.vibrate(vibrationPattern, indexInPatternToRepeat);
                     }
                 });
             }
@@ -90,7 +82,7 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
     // Create a data map and put data in it
     private void testDataMap() {
         putDataMapReq = PutDataMapRequest.create("/minData");
-        putDataMapReq.getDataMap().putString("meddelande","Hej!");
+        //putDataMapReq.getDataMap().putString("meddelande","Hej!");
         Date d = new Date();
         putDataMapReq.getDataMap().putLong("time", d.getTime());
         PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
@@ -130,6 +122,13 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
                 if (item.getUri().getPath().compareTo("/minData") == 0) {
                     DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
                     mTextView.setText(Long.toString(dataMap.getLong("time")));
+                    //Get vibrator service
+                    Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+
+                    //Vibrate method needs a pattern and to reapeat number ( -1 = no repeat)
+                    long[] vibrationPattern = {0, 1, 100, 400};
+                    int indexInPatternToRepeat = -1;
+                    vibrator.vibrate(vibrationPattern, indexInPatternToRepeat);
                 }
             } else if (event.getType() == DataEvent.TYPE_DELETED) {
                 // DataItem deleted

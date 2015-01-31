@@ -16,7 +16,21 @@
 
 package com.app.poke.poke;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.Api;
+import com.google.android.gms.common.api.BaseImplementation;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.common.api.Result;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Scope;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.common.api.d;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.PutDataMapRequest;
+import com.google.android.gms.wearable.PutDataRequest;
+import com.google.android.gms.wearable.Wearable;
 
 import android.app.IntentService;
 import android.app.NotificationManager;
@@ -24,10 +38,15 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.os.Vibrator;
+import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 /**
  * This {@code IntentService} does the actual handling of the GCM message.
@@ -38,11 +57,14 @@ import android.util.Log;
  */
 public class GcmIntentService extends IntentService {
     public static final int NOTIFICATION_ID = 1;
+    PutDataMapRequest putDataMapReq;
+    GoogleApiClient mGoogleApiClient;
     private NotificationManager mNotificationManager;
     NotificationCompat.Builder builder;
 
     public GcmIntentService() {
         super("GcmIntentService");
+        mGoogleApiClient = ((MainActivityPhone)this.getApplicationContext()).mGoogleApiClient;
     }
     public static final String TAG = "GCM Demo";
 
@@ -67,10 +89,12 @@ public class GcmIntentService extends IntentService {
             // If it's a regular GCM message, do some work.
             } else if (GoogleCloudMessaging.MESSAGE_TYPE_MESSAGE.equals(messageType)) {
                 // This loop represents the service doing some work.
-                //Get vibrator service
-                Vibrator v = (Vibrator) this.getSystemService(Context.VIBRATOR_SERVICE);
-                // Vibrate for 500 milliseconds
-                v.vibrate(500);
+
+                Date d = new Date();
+                putDataMapReq.getDataMap().putLong("time", d.getTime());
+
+                Wearable.DataApi.putDataItem( mGoogleApiClient, putDataMapReq.asPutDataRequest());
+
                 sendNotification("Received: " + extras.toString());
                 Log.i(TAG, "Received: " + extras.toString());
             }
@@ -100,4 +124,25 @@ public class GcmIntentService extends IntentService {
         mBuilder.setContentIntent(contentIntent);
         mNotificationManager.notify(NOTIFICATION_ID, mBuilder.build());
     }
+
+    // Create a data map and put data in it
+    private void testDataMap() {
+        putDataMapReq = PutDataMapRequest.create("/minData");
+        //putDataMapReq.getDataMap().putString("meddelande","Hej!");
+        //Date d = new Date();
+        //putDataMapReq.getDataMap().putLong("time", d.getTime());
+        PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
+        //Wearable.DataApi.addListener(mGoogleApiClient, this);
+        PendingResult<DataApi.DataItemResult> pendingResult =
+                Wearable.DataApi.putDataItem(mGoogleApiClient, putDataReq);
+        pendingResult.setResultCallback(new ResultCallback<DataApi.DataItemResult>() {
+            @Override
+            public void onResult(final DataApi.DataItemResult result) {
+                if(result.getStatus().isSuccess()) {
+                    Log.d("NVM", "Data item set: " + result.getDataItem().getUri());
+                }
+            }
+        });
+    }
+
 }

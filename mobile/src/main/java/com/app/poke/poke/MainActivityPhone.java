@@ -130,7 +130,7 @@ public class MainActivityPhone extends ActionBarActivity
                 String msg = "";
                 try {
                     Bundle data = new Bundle();
-                    data.putString("to", "haemp");
+                    data.putString("to", PokeConfig.TO_ID);
                     String id = Integer.toString(msgId.incrementAndGet());
                     gcm.send(PokeConfig.SENDER_ID + "@gcm.googleapis.com", id, data);
                     msg = "Server call sent.";

@@ -45,7 +45,7 @@ import com.google.android.gms.wearable.Wearable;
 
 public class MainActivityPhone extends ActionBarActivity implements GoogleApiClient.ConnectionCallbacks,DataApi.DataListener,GoogleApiClient.OnConnectionFailedListener{
     public static final String EXTRA_MESSAGE = "message";
-    public static final String PROPERTY_REG_ID = "97987986979";
+    public static final String PROPERTY_REG_ID = "registration_id";
     private static final String PROPERTY_APP_VERSION = "appVersion";
     private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
 
@@ -71,6 +71,7 @@ public class MainActivityPhone extends ActionBarActivity implements GoogleApiCli
         if( checkPlayServices() ){
             gcm = GoogleCloudMessaging.getInstance(this);
             regid = getRegistrationId(context);
+            Log.i(TAG, "Registration ID is" + regid);
 
             if (regid.isEmpty()) {
                 registerInBackground();

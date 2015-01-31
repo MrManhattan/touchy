@@ -121,7 +121,7 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
                 DataItem item = event.getDataItem();
                 if (item.getUri().getPath().compareTo("/minData") == 0) {
                     DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
-                    mTextView.setText(Long.toString(dataMap.getLong("time")));
+                    //mTextView.setText(Long.toString(dataMap.getLong("time")));
                     //Get vibrator service
                     Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
 

@@ -91,6 +91,7 @@ public class GcmIntentService extends IntentService {
                 // This loop represents the service doing some work.
 
                 Date d = new Date();
+                testDataMap();
                 putDataMapReq.getDataMap().putLong("time", d.getTime());
 
                 Wearable.DataApi.putDataItem( MainActivityPhone.mGoogleApiClient, putDataMapReq.asPutDataRequest());

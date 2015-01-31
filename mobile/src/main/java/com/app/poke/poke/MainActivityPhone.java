@@ -1,73 +1,87 @@
 package com.app.poke.poke;
 
-import android.app.Activity;
-import android.content.ComponentName;
 import android.content.Context;
-
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
-
-import android.os.Vibrator;
-
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.NotificationManagerCompat;
-import android.support.v4.content.WakefulBroadcastReceiver;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
-
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
-import com.google.android.gms.gcm.GoogleCloudMessaging;
-
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.gcm.GoogleCloudMessaging;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataItem;
 import com.google.android.gms.wearable.DataMap;
 import com.google.android.gms.wearable.DataMapItem;
+import com.google.android.gms.wearable.MessageApi;
+import com.google.android.gms.wearable.MessageEvent;
+import com.google.android.gms.wearable.NodeApi;
 import com.google.android.gms.wearable.Wearable;
 
+import org.w3c.dom.Node;
 
-public class MainActivityPhone extends ActionBarActivity implements GoogleApiClient.ConnectionCallbacks,DataApi.DataListener,GoogleApiClient.OnConnectionFailedListener{
+import java.io.IOException;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * Created by staefy on 31/01/15.
+ *
+ * Intermediary between wearable and server.
+ *
+ */
+public class MainActivityPhone extends ActionBarActivity
+        implements GoogleApiClient.ConnectionCallbacks,MessageApi.MessageListener,GoogleApiClient.OnConnectionFailedListener{
+
+    /**********Defines ************/
     public static final String EXTRA_MESSAGE = "message";
-    public static final String PROPERTY_REG_ID = "97987986979";
+    public static final String PROPERTY_REG_ID = "registration_id";
     private static final String PROPERTY_APP_VERSION = "appVersion";
     private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
-
     public static final String TAG = "GCM Android";
+    public static final String START_ACTIVITY_PATH = "/start/MainActivity";
+    /**********Globals************/
     GoogleCloudMessaging gcm;
     AtomicInteger msgId = new AtomicInteger();
     SharedPreferences prefs;
     Context context;
-
     String regid;
     TextView textView;
-
     public static GoogleApiClient mGoogleApiClient;
 
+    /**********"Phone Main" - Connect to GCM and GAC************/
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main_activity_phone);
-
+        /********** Init globals ************/
         context = getApplicationContext();
         textView = (TextView) findViewById(R.id.textView);
-
+        /********** Connect to GAC - will end up in connected or failed handler ************/
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addApi(Wearable.API)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .build();
+        if(mGoogleApiClient == null){
+            Log.i(TAG, "GAC null, connect will fail");
+        }else{
+            Log.i(TAG, "GAC ok. Trying to connect...");
+            mGoogleApiClient.connect();
+        }
+        /********** Register for google play ************/
         if( checkPlayServices() ){
             gcm = GoogleCloudMessaging.getInstance(this);
             regid = getRegistrationId(context);
@@ -81,15 +95,139 @@ public class MainActivityPhone extends ActionBarActivity implements GoogleApiCli
             Log.i(TAG, "No valid Google Play Services APK found.");
         }
 
-        //Create GAC and test data map
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addApi(Wearable.API)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .build();
-        mGoogleApiClient.connect();
     }
 
+    /********** Communicating pokes with wearable************/
+    /**
+     *The START_ACTIVITY_PATH is not used and should be removed
+     *sends message between paired devices
+     * @param nodeId
+     * @return
+     */
+    public static void sendPokedMessage(String nodeId) {
+        Log.d(TAG, "Inside sendMessage()");
+        Wearable.MessageApi.sendMessage(
+                mGoogleApiClient, nodeId, START_ACTIVITY_PATH, new byte[0]).setResultCallback(
+                new ResultCallback<MessageApi.SendMessageResult>() {
+                    @Override
+                    public void onResult(MessageApi.SendMessageResult sendMessageResult) {
+                        if (!sendMessageResult.getStatus().isSuccess()) {
+                            Log.e(TAG, "Failed to send message with status code: "
+                                    + sendMessageResult.getStatus().getStatusCode());
+                        }
+                    }
+                }
+        );
+    }
+    @Override //Forward poke to server
+    public void onMessageReceived(MessageEvent messageEvent) {
+        Log.d(TAG, "MessageEvent: " + messageEvent.getData().toString());
+        //Send the poke to server
+        new AsyncTask<Void, Void, String>() {
+            @Override
+            protected String doInBackground(Void... params) {
+                String msg = "";
+                try {
+                    Bundle data = new Bundle();
+                    data.putString("to", "haemp");
+                    String id = Integer.toString(msgId.incrementAndGet());
+                    gcm.send(PokeConfig.SENDER_ID + "@gcm.googleapis.com", id, data);
+                    msg = "Server call sent.";
+                } catch (IOException ex) {
+                    msg = "Server call not sent. Error :" + ex.getMessage();
+                }
+                return msg;
+            }
+        }.execute(null, null, null);
+
+    }
+    /**
+     * Goes through connected devices and returns them
+     * Used in sending message between wearable and phone
+     * @param
+     * @return Collection<String>
+     */
+    public static Collection<String> getNodes() {
+        HashSet<String> results = new HashSet<String>();
+        NodeApi.GetConnectedNodesResult nodes =
+                Wearable.NodeApi.getConnectedNodes(mGoogleApiClient).await();
+        for (com.google.android.gms.wearable.Node node : nodes.getNodes()) {
+            results.add(node.getId());
+        }
+        return results;
+    }
+
+    /********** Not so important Handlers ************/
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_main_activity_phone, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_settings) {
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    /**
+     * We end up here if GAC.connect() was succesfull.
+     * And add listener to the DataApi object
+     * @param bundle
+     * @return
+     */
+    public void onConnected(Bundle bundle) {
+        Log.d(TAG, "onConnected()" );
+        Wearable.MessageApi.addListener(mGoogleApiClient, this);
+    }
+
+    /**
+     *Unused
+     * @param i
+     * @return
+     */
+    @Override
+    public void onConnectionSuspended(int i) {
+
+    }
+
+    /**
+     * We end up here when we re-enter the app
+     * Reconnect GAC and checkPLayServices
+     * @param
+     * @return
+     */
+    @Override
+    protected void onResume() {
+        Log.i(TAG, "in onResume()");
+        super.onStart();
+        mGoogleApiClient.connect();
+        checkPlayServices();
+    }
+
+    @Override
+    protected void onPause() {
+        Log.i(TAG, "in onPause()");
+        super.onPause();
+        mGoogleApiClient.disconnect();
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+        Log.i(TAG, "GAC.connect() FAILED!");
+    }
+
+    /********** Private helpers for GCM *********************/
     private boolean checkPlayServices() {
         int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
         if (resultCode != ConnectionResult.SUCCESS) {
@@ -153,7 +291,6 @@ public class MainActivityPhone extends ActionBarActivity implements GoogleApiCli
         }
     }
 
-
     /**
      * Registers the application with GCM servers asynchronously.
      * <p>
@@ -198,13 +335,6 @@ public class MainActivityPhone extends ActionBarActivity implements GoogleApiCli
 
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main_activity_phone, menu);
-        return true;
-    }
-
     /**
      * Sends the registration ID to your server over HTTP, so it can use GCM/HTTP
      * or CCS to send messages to your app. Not needed for this demo since the
@@ -232,85 +362,4 @@ public class MainActivityPhone extends ActionBarActivity implements GoogleApiCli
         editor.commit();
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-    public void onConnected(Bundle bundle) {
-        Log.d("krattaGAC", "onConnected: ");
-        Wearable.DataApi.addListener(mGoogleApiClient, this);
-
-    }
-
-    @Override
-    public void onConnectionSuspended(int i) {
-
-    }
-
-    @Override
-    public void onDataChanged(DataEventBuffer dataEvents) {
-
-        for (DataEvent event : dataEvents) {
-            if (event.getType() == DataEvent.TYPE_CHANGED) {
-                // DataItem changed
-                DataItem item = event.getDataItem();
-                if (item.getUri().getPath().compareTo("/minData") == 0) {
-                    DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
-                    final TextView textView = (TextView)findViewById(R.id.textView);
-                    //textView.setText(dataMap.getString("time"));
-
-                    //THE REAL CODE FOR SENDING SOMETHING TO SERVER
-                    new AsyncTask<Void, Void, String>() {
-                        @Override
-                        protected String doInBackground(Void... params) {
-                            String msg = "";
-                            try {
-                                Bundle data = new Bundle();
-
-                                data.putString("to", PokeConfig.TO_ID);
-
-                                String id = Integer.toString(msgId.incrementAndGet());
-                                gcm.send(PokeConfig.SENDER_ID + "@gcm.googleapis.com", id, data);
-                                msg = "STAFFAN";
-                            } catch (IOException ex) {
-                                msg = "Error :" + ex.getMessage();
-                            }
-                            return msg;
-                        }
-                    }.execute(null, null, null);
-                }
-            } else if (event.getType() == DataEvent.TYPE_DELETED) {
-                // DataItem deleted
-            }
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onStart();
-        mGoogleApiClient.connect();
-        checkPlayServices();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        //Wearable.DataApi.removeListener(mGoogleApiClient, this);
-        //mGoogleApiClient.disconnect();
-    }
-
-    @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
-
-    }
 }

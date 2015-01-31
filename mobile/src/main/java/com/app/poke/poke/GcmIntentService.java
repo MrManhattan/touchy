@@ -37,6 +37,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -45,6 +46,7 @@ import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
+import java.util.Collection;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
@@ -65,7 +67,7 @@ public class GcmIntentService extends IntentService {
         super("GcmIntentService");
 
     }
-    public static final String TAG = "GCM Demo";
+    public static final String TAG = "Poked";
 
     @Override
     protected void onHandleIntent(Intent intent) {
@@ -90,13 +92,25 @@ public class GcmIntentService extends IntentService {
             } else if (GoogleCloudMessaging.MESSAGE_TYPE_MESSAGE.equals(messageType)) {
                 // This loop represents the service doing some work.
 
-                Date d = new Date();
-                testDataMap();
-                putDataMapReq.getDataMap().putLong("time", d.getTime());
+                //Take server message and forward to watch (first node FIXME: more nodes?
+                try {
+                    new AsyncTask<Void, Void, String>() {
 
-                Wearable.DataApi.putDataItem( MainActivityPhone.mGoogleApiClient, putDataMapReq.asPutDataRequest());
+                        @Override
+                        protected String doInBackground(Void... params) {
+                            Collection<String> nodes = MainActivityPhone.getNodes();
+                            String nodeid = nodes.iterator().next();
+                            Log.d(TAG, "Node id: "+nodeid);
+                            MainActivityPhone.sendPokedMessage(nodeid);
+                            return null;
+                        }
+                    }.execute(null, null, null);
 
-                sendNotification("Received: " + extras.toString());
+                }catch (Exception e){
+                    Log.d(TAG, e.getMessage());
+                }
+
+                sendNotification("Poke from: " + extras.getString("to"));
                 Log.i(TAG, "Received: " + extras.toString());
             }
         }
@@ -104,9 +118,6 @@ public class GcmIntentService extends IntentService {
         GcmBroadcastReceiver.completeWakefulIntent(intent);
     }
 
-    // Put the message into a notification and post it.
-    // This is just one simple example of what you might choose to do with
-    // a GCM message.
     private void sendNotification(String msg) {
         mNotificationManager = (NotificationManager)
                 this.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -116,7 +127,7 @@ public class GcmIntentService extends IntentService {
 
         NotificationCompat.Builder mBuilder =
                 new NotificationCompat.Builder(this)
-        .setSmallIcon(R.drawable.common_signin_btn_icon_dark)
+        .setSmallIcon(R.drawable.powered_by_google_dark)
         .setContentTitle("GCM Notification")
         .setStyle(new NotificationCompat.BigTextStyle()
         .bigText(msg))
@@ -124,26 +135,6 @@ public class GcmIntentService extends IntentService {
 
         mBuilder.setContentIntent(contentIntent);
         mNotificationManager.notify(NOTIFICATION_ID, mBuilder.build());
-    }
-
-    // Create a data map and put data in it
-    private void testDataMap() {
-        putDataMapReq = PutDataMapRequest.create("/minData");
-        //putDataMapReq.getDataMap().putString("meddelande","Hej!");
-        //Date d = new Date();
-        //putDataMapReq.getDataMap().putLong("time", d.getTime());
-        PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
-        //Wearable.DataApi.addListener(mGoogleApiClient, this);
-        PendingResult<DataApi.DataItemResult> pendingResult =
-                Wearable.DataApi.putDataItem(MainActivityPhone.mGoogleApiClient, putDataReq);
-        pendingResult.setResultCallback(new ResultCallback<DataApi.DataItemResult>() {
-            @Override
-            public void onResult(final DataApi.DataItemResult result) {
-                if(result.getStatus().isSuccess()) {
-                    Log.d("NVM", "Data item set: " + result.getDataItem().getUri());
-                }
-            }
-        });
     }
 
 }

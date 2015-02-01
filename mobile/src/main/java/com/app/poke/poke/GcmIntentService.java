@@ -100,7 +100,7 @@ public class GcmIntentService extends IntentService {
             } else if (GoogleCloudMessaging.MESSAGE_TYPE_MESSAGE.equals(messageType)) {
                 //SOCKET CODE
 
-                try{
+            /*    try{
                     socket = IO.socket("http://192.168.1.69");
                 }catch(Exception e){
                     Log.e(TAG, "COnnect error");
@@ -124,7 +124,7 @@ public class GcmIntentService extends IntentService {
                             e.printStackTrace();
                         }
                     }
-                });
+                });*/
 
 
 

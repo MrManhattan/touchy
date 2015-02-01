@@ -81,12 +81,10 @@ public class MainActivityPhone extends ActionBarActivity
         IO.Options opts = new IO.Options();
         //opts.forceNew = true;
        // opts.reconnection = false;
-        final Socket socket;
+
         try {
-           socket = IO.socket("http://192.168.1.69", opts);
-
-
-        socket.on(Socket.EVENT_CONNECT, new Emitter.Listener() {
+            socket = IO.socket("http://192.168.1.69", opts);
+            socket.on(Socket.EVENT_CONNECT, new Emitter.Listener() {
 
             @Override
             public void call(Object... args) {
@@ -178,6 +176,8 @@ public class MainActivityPhone extends ActionBarActivity
                 }
         );
     }
+
+
     @Override //Forward poke to server
     public void onMessageReceived(MessageEvent messageEvent) {
         Log.d(TAG, "MessageEvent: " + messageEvent.getData().toString());

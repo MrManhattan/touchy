@@ -38,6 +38,7 @@ import org.json.JSONObject;
 import org.w3c.dom.Node;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -66,6 +67,7 @@ public class MainActivityPhone extends ActionBarActivity
     String regid;
     TextView textView;
     public static GoogleApiClient mGoogleApiClient;
+    public Socket socket;
 
     /**********"Phone Main" - Connect to GCM and GAC************/
     @Override
@@ -88,8 +90,8 @@ public class MainActivityPhone extends ActionBarActivity
 
             @Override
             public void call(Object... args) {
-                socket.emit("touch", "hi");
-                socket.disconnect();
+                socket.emit("Poke.ready", "hi");
+                //socket.disconnect();
             }
 
         }).on("event", new Emitter.Listener() {
@@ -103,30 +105,14 @@ public class MainActivityPhone extends ActionBarActivity
             @Override
             public void call(Object... args) {}
 
+        }).on("touch", new Emitter.Listener() {
+            @Override
+            public void call(Object... args) {
+                JSONObject obj = (JSONObject) args[0];
+                Log.i(TAG, "Received JSON");
+            }
         });
-        socket.connect();
-
-            //Callback if server received message
-            socket.emit("foo", "woot", new Ack() {
-                @Override
-                public void call(Object... args) {}
-            });
-
-            // Sending an object
-            JSONObject obj = new JSONObject();
-            obj.put("touc1h", "s");
-            obj.put("binary", new byte[42]);
-            socket.emit("touch", obj);
-
-
-            // Receiving an object
-            socket.on("foo", new Emitter.Listener() {
-                @Override
-                public void call(Object... args) {
-                    JSONObject obj = (JSONObject) args[0];
-                    Log.i(TAG, "Received JSON");
-                }
-            });
+        socket.connect(); //After connect we send a touch object
 
         }catch(Exception e){
             Log.i(TAG, "Receive/Send/Socket ERROR!!");
@@ -201,6 +187,12 @@ public class MainActivityPhone extends ActionBarActivity
             protected String doInBackground(Void... params) {
                 String msg = "";
                 try {
+                    //SOCKET CODE
+                    // Sending an object
+                    JSONObject obj = new JSONObject();
+                    socket.emit("Poke.poke", obj);
+
+
                     Bundle data = new Bundle();
                     data.putString("to", PokeConfig.TO_ID);
                     String id = Integer.toString(msgId.incrementAndGet());

@@ -16,6 +16,9 @@
 
 package com.app.poke.poke;
 
+import com.github.nkzawa.emitter.Emitter;
+import com.github.nkzawa.socketio.client.IO;
+import com.github.nkzawa.socketio.client.Socket;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.Api;
 import com.google.android.gms.common.api.BaseImplementation;
@@ -46,6 +49,8 @@ import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
+import org.json.JSONObject;
+
 import java.util.Collection;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
@@ -62,6 +67,7 @@ public class GcmIntentService extends IntentService {
     PutDataMapRequest putDataMapReq;
     private NotificationManager mNotificationManager;
     NotificationCompat.Builder builder;
+    public Socket socket;
 
     public GcmIntentService() {
         super("GcmIntentService");
@@ -71,6 +77,13 @@ public class GcmIntentService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
+        //SOCKET
+        try{
+            Socket socket = IO.socket("http://192.168.1.69");
+
+        }catch(Exception e){
+            Log.i(TAG, "COnnect error");
+        }
        // mGoogleApiClient = ((MainActivityPhone)this.getApplicationContext()).mGoogleApiClient;
         Bundle extras = intent.getExtras();
         GoogleCloudMessaging gcm = GoogleCloudMessaging.getInstance(this);
@@ -90,13 +103,23 @@ public class GcmIntentService extends IntentService {
                 sendNotification("Deleted messages on server: " + extras.toString());
             // If it's a regular GCM message, do some work.
             } else if (GoogleCloudMessaging.MESSAGE_TYPE_MESSAGE.equals(messageType)) {
-                // This loop represents the service doing some work.
+                //SOCKET CODE
+                socket.connect();
+                // Receiving an object
+                socket.on("touched", new Emitter.Listener() {
+                    @Override
+                    public void call(Object... args) {
+                        JSONObject obj = (JSONObject) args[0];
+                        Log.i(TAG, "Received JSON");
+                    }
+                });
 
                 //Take server message and forward to watch (first node FIXME: more nodes?
                 Collection<String> nodes = MainActivityPhone.getNodes();
                 String nodeid = nodes.iterator().next();
                 Log.d(TAG, "Node id: "+nodeid);
                 MainActivityPhone.sendPokedMessage(nodeid);
+
 //                try {
 //                    new AsyncTask<Void, Void, String>() {
 //

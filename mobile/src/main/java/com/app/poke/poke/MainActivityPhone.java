@@ -34,6 +34,7 @@ import com.google.android.gms.wearable.MessageEvent;
 import com.google.android.gms.wearable.NodeApi;
 import com.google.android.gms.wearable.Wearable;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.w3c.dom.Node;
 
@@ -88,7 +89,14 @@ public class MainActivityPhone extends ActionBarActivity
 
             @Override
             public void call(Object... args) {
-                socket.emit("Poke.ready", "hi");
+                try {
+                    JSONObject o;
+                    o = new JSONObject("{\"from\": \""+PokeConfig.CLIENT_ID+"\" }");
+                    Log.i(TAG, "Setting up JSON object "+o.toString());
+                    socket.emit("Poke.ready", o);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
                 //socket.disconnect();
             }
 
@@ -104,12 +112,12 @@ public class MainActivityPhone extends ActionBarActivity
             public void call(Object... args) {}
 
         }).on("touch", new Emitter.Listener() {
-            @Override
-            public void call(Object... args) {
-                JSONObject obj = (JSONObject) args[0];
-                Log.i(TAG, "Received JSON");
-            }
-        });
+                @Override
+                public void call(Object... args) {
+                    JSONObject obj = (JSONObject) args[0];
+                    Log.i(TAG, "Received JSON");
+                }
+            });
         socket.connect(); //After connect we send a touch object
 
         }catch(Exception e){

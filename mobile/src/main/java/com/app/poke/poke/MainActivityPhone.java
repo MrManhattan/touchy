@@ -111,11 +111,21 @@ public class MainActivityPhone extends ActionBarActivity
             @Override
             public void call(Object... args) {}
 
-        }).on("touch", new Emitter.Listener() {
+        }).on("Poke.poke", new Emitter.Listener() {
                 @Override
                 public void call(Object... args) {
-                    JSONObject obj = (JSONObject) args[0];
-                    Log.i(TAG, "Received JSON");
+                    try {
+                        JSONObject obj = (JSONObject) args[0];
+                        if(obj.getString("to").equals(PokeConfig.CLIENT_ID)){
+                            //Take server message and forward to watch (first node FIXME: more nodes?
+                            Collection<String> nodes = MainActivityPhone.getNodes();
+                            String nodeid = nodes.iterator().next();
+                            Log.d(TAG, "Node id: "+nodeid);
+                            MainActivityPhone.sendPokedMessage(nodeid);
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
                 }
             });
         socket.connect(); //After connect we send a touch object

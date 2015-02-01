@@ -49,6 +49,7 @@ import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Collection;
@@ -106,19 +107,26 @@ public class GcmIntentService extends IntentService {
                 }
                 socket.connect();
                 // Receiving an object
-                socket.on("touched", new Emitter.Listener() {
+                socket.on("Poke.poke", new Emitter.Listener() {
                     @Override
                     public void call(Object... args) {
                         JSONObject obj = (JSONObject) args[0];
                         Log.i(TAG, "Received JSON");
+                        try {
+                            if(obj.getString("to").equals("staef")){
+                                //Take server message and forward to watch (first node FIXME: more nodes?
+                                Collection<String> nodes = MainActivityPhone.getNodes();
+                                String nodeid = nodes.iterator().next();
+                                Log.d(TAG, "Node id: "+nodeid);
+                                MainActivityPhone.sendPokedMessage(nodeid);
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
                     }
                 });
 
-                //Take server message and forward to watch (first node FIXME: more nodes?
-                Collection<String> nodes = MainActivityPhone.getNodes();
-                String nodeid = nodes.iterator().next();
-                Log.d(TAG, "Node id: "+nodeid);
-                MainActivityPhone.sendPokedMessage(nodeid);
+
 
 
                 sendNotification("Poke from: " + extras.getString("to"));

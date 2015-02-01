@@ -68,7 +68,7 @@ public class MainActivityPhone extends ActionBarActivity
     String regid;
     TextView textView;
     public static GoogleApiClient mGoogleApiClient;
-    public Socket socket;
+    Socket socket;
 
     /**********"Phone Main" - Connect to GCM and GAC************/
     @Override
@@ -198,6 +198,7 @@ public class MainActivityPhone extends ActionBarActivity
                     //SOCKET CODE
                     // Sending an object
                     JSONObject obj = new JSONObject();
+                    obj.put("to","haemp");
                     socket.emit("Poke.poke", obj);
 
 
@@ -206,7 +207,7 @@ public class MainActivityPhone extends ActionBarActivity
                     String id = Integer.toString(msgId.incrementAndGet());
                     gcm.send(PokeConfig.SENDER_ID + "@gcm.googleapis.com", id, data);
                     msg = "Server call sent.";
-                } catch (IOException ex) {
+                } catch (Exception ex) {
                     msg = "Server call not sent. Error :" + ex.getMessage();
                 }
                 return msg;

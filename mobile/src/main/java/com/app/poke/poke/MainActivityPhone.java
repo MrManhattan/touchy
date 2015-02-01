@@ -84,7 +84,7 @@ public class MainActivityPhone extends ActionBarActivity
        // opts.reconnection = false;
 
         try {
-            socket = IO.socket("http://192.168.1.69", opts);
+            socket = IO.socket(PokeConfig.SOCKET_IP, opts);
             socket.on(Socket.EVENT_CONNECT, new Emitter.Listener() {
 
             @Override
@@ -114,6 +114,7 @@ public class MainActivityPhone extends ActionBarActivity
         }).on("Poke.poke", new Emitter.Listener() {
                 @Override
                 public void call(Object... args) {
+                    Log.d(TAG, "Incomming poke");
                     try {
                         JSONObject obj = (JSONObject) args[0];
                         if(obj.getString("to").equals(PokeConfig.CLIENT_ID)){
@@ -134,7 +135,8 @@ public class MainActivityPhone extends ActionBarActivity
                     }
                 }
             });
-        socket.connect(); //After connect we send a touch object
+            Log.i(TAG, "Connecting to socket");
+            socket.connect(); //After connect we send a touch object
 
         }catch(Exception e){
             Log.i(TAG, "Receive/Send/Socket ERROR!!");

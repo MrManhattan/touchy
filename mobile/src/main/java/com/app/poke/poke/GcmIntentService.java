@@ -113,7 +113,7 @@ public class GcmIntentService extends IntentService {
                         JSONObject obj = (JSONObject) args[0];
                         Log.i(TAG, "Received JSON");
                         try {
-                            if(obj.getString("to").equals("staef")){
+                            if(obj.getString("to").equals(PokeConfig.CLIENT_ID)){
                                 //Take server message and forward to watch (first node FIXME: more nodes?
                                 Collection<String> nodes = MainActivityPhone.getNodes();
                                 String nodeid = nodes.iterator().next();

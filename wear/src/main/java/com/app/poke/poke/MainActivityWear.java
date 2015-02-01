@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.os.Vibrator;
 import android.support.wearable.view.WatchViewStub;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -33,6 +34,7 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
     /********** Globals ************/
     private TextView mTextView;
     public GoogleApiClient mGoogleApiClient;
+    private boolean VIBRATE = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,27 +57,52 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
             public void onLayoutInflated(WatchViewStub stub) {
                 mTextView = (TextView) stub.findViewById(R.id.text);
                 Button btnRecord = (Button) stub.findViewById(R.id.btnRecord);
-                btnRecord.setOnClickListener(new WatchViewStub.OnClickListener() {
 
-                    @Override
-                    public void onClick(View v) {
-                        try {
-                            new AsyncTask<Void, Void, String>() {
+                btnRecord.setOnTouchListener(new WatchViewStub.OnTouchListener() {
 
-                                @Override
-                                protected String doInBackground(Void... params) {
-                                    Collection<String> nodes = getNodes();
-                                    String nodeid = nodes.iterator().next();
-                                    Log.d(TAG, "Node id: "+nodeid);
-                                    sendPokeMessage(nodeid);
-                                    return null;
+                    public boolean onTouch(View yourButton, MotionEvent theMotion) {
+                        switch (theMotion.getAction()) {
+                            case MotionEvent.ACTION_DOWN:
+
+                                try {
+                                    new AsyncTask<Void, Void, String>() {
+
+                                        @Override
+                                        protected String doInBackground(Void... params) {
+                                            Collection<String> nodes = getNodes();
+                                            String nodeid = nodes.iterator().next();
+                                            Log.d(TAG, "Node id: " + nodeid); //FIXME more than one node?
+                                            sendPokeStartMessage(nodeid);
+                                            return null;
+                                        }
+                                    }.execute(null, null, null);
+
+                                } catch (Exception e) {
+                                    Log.d(TAG, e.getMessage());
                                 }
-                            }.execute(null, null, null);
+                                break;
+                            case MotionEvent.ACTION_UP:
+                                try {
+                                    new AsyncTask<Void, Void, String>() {
 
-                        }catch (Exception e){
-                            Log.d(TAG, e.getMessage());
+                                        @Override
+                                        protected String doInBackground(Void... params) {
+                                            Collection<String> nodes = getNodes();
+                                            String nodeid = nodes.iterator().next();//FIXME more than one node?
+                                            Log.d(TAG, "Node id: " + nodeid);
+                                            sendPokeStopMessage(nodeid);
+                                            return null;
+                                        }
+                                    }.execute(null, null, null);
+
+                                } catch (Exception e) {
+                                    Log.d(TAG, e.getMessage());
+                                }
+                                break;
                         }
+                        return true;
                     }
+
                 });
             }
         });
@@ -90,15 +117,31 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
      * @param nodeId
      * @return
      */
-    public void sendPokeMessage(String nodeId) {
-        Log.d(TAG, "Inside sendMessage()");
+    public void sendPokeStartMessage(String nodeId) {
+        Log.d(TAG, "Inside startMessage()");
         Wearable.MessageApi.sendMessage(
-                mGoogleApiClient, nodeId, START_ACTIVITY_PATH, new byte[0]).setResultCallback(
+                mGoogleApiClient, nodeId, "start", new byte[0]).setResultCallback(
                 new ResultCallback<MessageApi.SendMessageResult>() {
                     @Override
                     public void onResult(MessageApi.SendMessageResult sendMessageResult) {
                         if (!sendMessageResult.getStatus().isSuccess()) {
-                            Log.e(TAG, "Failed to send message with status code: "
+                            Log.e(TAG, "Failed to send start with status code: "
+                                    + sendMessageResult.getStatus().getStatusCode());
+                        }
+                    }
+                }
+        );
+    }
+
+    public void sendPokeStopMessage(String nodeId) {
+        Log.d(TAG, "Inside stopMessage()");
+        Wearable.MessageApi.sendMessage(
+                mGoogleApiClient, nodeId, "stop", new byte[0]).setResultCallback(
+                new ResultCallback<MessageApi.SendMessageResult>() {
+                    @Override
+                    public void onResult(MessageApi.SendMessageResult sendMessageResult) {
+                        if (!sendMessageResult.getStatus().isSuccess()) {
+                            Log.e(TAG, "Failed to send stop with status code: "
                                     + sendMessageResult.getStatus().getStatusCode());
                         }
                     }
@@ -109,13 +152,13 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
     @Override //Handle the received poke (vibrating etc)
     public void onMessageReceived(MessageEvent messageEvent) {
         Log.d(TAG, "MessageEvent: " + messageEvent.getData().toString());
-        //Vibrate device
         Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-        //Vibrate method needs a pattern and to reapeat number ( -1 = no repeat)
-        long[] vibrationPattern = {0, 1, 100, 400};
-        int indexInPatternToRepeat = -1;
-        vibrator.vibrate(vibrationPattern, indexInPatternToRepeat);
-
+        //TODO check which event Vibrate device
+        if(messageEvent.getPath().equals("start")){
+            vibrator.vibrate(10000);
+        }else if(messageEvent.getPath().equals("stop")){
+            vibrator.cancel();
+        }
     }
     /**
      * Goes through connected devices and returns them

@@ -121,7 +121,13 @@ public class MainActivityPhone extends ActionBarActivity
                             Collection<String> nodes = MainActivityPhone.getNodes();
                             String nodeid = nodes.iterator().next();
                             Log.d(TAG, "Node id: "+nodeid);
-                            MainActivityPhone.sendPokedMessage(nodeid);
+
+                            if(obj.getString("status").equals("start")){
+                                MainActivityPhone.sendPokedStartMessage(nodeid);
+
+                            }else if(obj.getString("status").equals("stop")){
+                                MainActivityPhone.sendPokedStopMessage(nodeid);
+                            }
                         }
                     } catch (JSONException e) {
                         e.printStackTrace();
@@ -179,10 +185,25 @@ public class MainActivityPhone extends ActionBarActivity
      * @param nodeId
      * @return
      */
-    public static void sendPokedMessage(String nodeId) {
+    public static void sendPokedStartMessage(String nodeId) {
         Log.d(TAG, "Inside sendMessage()");
         Wearable.MessageApi.sendMessage(
-                mGoogleApiClient, nodeId, START_ACTIVITY_PATH, new byte[0]).setResultCallback(
+                mGoogleApiClient, nodeId,"start", new byte[0]).setResultCallback(
+                new ResultCallback<MessageApi.SendMessageResult>() {
+                    @Override
+                    public void onResult(MessageApi.SendMessageResult sendMessageResult) {
+                        if (!sendMessageResult.getStatus().isSuccess()) {
+                            Log.e(TAG, "Failed to send message with status code: "
+                                    + sendMessageResult.getStatus().getStatusCode());
+                        }
+                    }
+                }
+        );
+    }
+    public static void sendPokedStopMessage(String nodeId) {
+        Log.d(TAG, "Inside sendMessage()");
+        Wearable.MessageApi.sendMessage(
+                mGoogleApiClient, nodeId, "stop", new byte[0]).setResultCallback(
                 new ResultCallback<MessageApi.SendMessageResult>() {
                     @Override
                     public void onResult(MessageApi.SendMessageResult sendMessageResult) {
@@ -197,7 +218,7 @@ public class MainActivityPhone extends ActionBarActivity
 
 
     @Override //Forward poke to server
-    public void onMessageReceived(MessageEvent messageEvent) {
+    public void onMessageReceived(final MessageEvent messageEvent) {
         Log.d(TAG, "MessageEvent: " + messageEvent.getData().toString());
         //Send the poke to server
         new AsyncTask<Void, Void, String>() {
@@ -209,13 +230,18 @@ public class MainActivityPhone extends ActionBarActivity
                     // Sending an object
                     JSONObject obj = new JSONObject();
                     obj.put("to", PokeConfig.TO_ID);
+                    if(messageEvent.getPath().equals("start")){
+                        obj.put("status","start");
+                    }else if(messageEvent.getPath().equals("stop")){
+                        obj.put("status","stop");
+                    }
                     socket.emit("Poke.poke", obj);
 
 
                     Bundle data = new Bundle();
                     data.putString("to", PokeConfig.TO_ID);
                     String id = Integer.toString(msgId.incrementAndGet());
-                    gcm.send(PokeConfig.SENDER_ID + "@gcm.googleapis.com", id, data);
+                    //gcm.send(PokeConfig.SENDER_ID + "@gcm.googleapis.com", id, data);
                     msg = "Server call sent.";
                 } catch (Exception ex) {
                     msg = "Server call not sent. Error :" + ex.getMessage();

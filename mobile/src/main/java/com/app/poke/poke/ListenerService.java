@@ -19,13 +19,8 @@ import java.util.concurrent.TimeUnit;
     @Override
     public void onMessageReceived(MessageEvent messageEvent) {
         nodeId = messageEvent.getSourceNodeId();
-        showToast(messageEvent.getPath());
-    }
 
-    private void showToast(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
-
 
     private void reply(String message) {
         GoogleApiClient client = new GoogleApiClient.Builder(this)

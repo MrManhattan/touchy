@@ -8,11 +8,16 @@ import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
+import android.test.suitebuilder.annotation.Suppress;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
 
+import com.github.nkzawa.emitter.Emitter;
+import com.github.nkzawa.socketio.client.Ack;
+import com.github.nkzawa.socketio.client.IO;
+import com.github.nkzawa.socketio.client.Socket;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -29,6 +34,7 @@ import com.google.android.gms.wearable.MessageEvent;
 import com.google.android.gms.wearable.NodeApi;
 import com.google.android.gms.wearable.Wearable;
 
+import org.json.JSONObject;
 import org.w3c.dom.Node;
 
 import java.io.IOException;
@@ -66,6 +72,72 @@ public class MainActivityPhone extends ActionBarActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main_activity_phone);
+
+
+
+        /**********SOCKET CODE ************/
+        IO.Options opts = new IO.Options();
+        //opts.forceNew = true;
+       // opts.reconnection = false;
+        final Socket socket;
+        try {
+           socket = IO.socket("http://192.168.1.69", opts);
+
+
+        socket.on(Socket.EVENT_CONNECT, new Emitter.Listener() {
+
+            @Override
+            public void call(Object... args) {
+                socket.emit("touch", "hi");
+                socket.disconnect();
+            }
+
+        }).on("event", new Emitter.Listener() {
+
+            @Override
+            public void call(Object... args) {
+            }
+
+        }).on(Socket.EVENT_DISCONNECT, new Emitter.Listener() {
+
+            @Override
+            public void call(Object... args) {}
+
+        });
+        socket.connect();
+
+            //Callback if server received message
+            socket.emit("foo", "woot", new Ack() {
+                @Override
+                public void call(Object... args) {}
+            });
+
+            // Sending an object
+            JSONObject obj = new JSONObject();
+            obj.put("touc1h", "s");
+            obj.put("binary", new byte[42]);
+            socket.emit("touch", obj);
+
+
+            // Receiving an object
+            socket.on("foo", new Emitter.Listener() {
+                @Override
+                public void call(Object... args) {
+                    JSONObject obj = (JSONObject) args[0];
+                    Log.i(TAG, "Received JSON");
+                }
+            });
+
+        }catch(Exception e){
+            Log.i(TAG, "Receive/Send/Socket ERROR!!");
+        }
+
+
+
+
+
+
+
         /********** Init globals ************/
         context = getApplicationContext();
         textView = (TextView) findViewById(R.id.textView);
@@ -361,5 +433,11 @@ public class MainActivityPhone extends ActionBarActivity
         editor.putInt(PROPERTY_APP_VERSION, appVersion);
         editor.commit();
     }
+
+
+
+
+
+
 
 }

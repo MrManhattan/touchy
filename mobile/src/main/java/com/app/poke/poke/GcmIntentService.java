@@ -68,7 +68,7 @@ public class GcmIntentService extends IntentService {
     PutDataMapRequest putDataMapReq;
     private NotificationManager mNotificationManager;
     NotificationCompat.Builder builder;
-    public Socket socket;
+    public static Socket socket;
 
     public GcmIntentService() {
         super("GcmIntentService");
@@ -78,13 +78,7 @@ public class GcmIntentService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        //SOCKET
-        try{
-            Socket socket = IO.socket("http://192.168.1.69");
 
-        }catch(Exception e){
-            Log.i(TAG, "COnnect error");
-        }
        // mGoogleApiClient = ((MainActivityPhone)this.getApplicationContext()).mGoogleApiClient;
         Bundle extras = intent.getExtras();
         GoogleCloudMessaging gcm = GoogleCloudMessaging.getInstance(this);
@@ -105,6 +99,12 @@ public class GcmIntentService extends IntentService {
             // If it's a regular GCM message, do some work.
             } else if (GoogleCloudMessaging.MESSAGE_TYPE_MESSAGE.equals(messageType)) {
                 //SOCKET CODE
+
+                try{
+                    socket = IO.socket("http://192.168.1.69");
+                }catch(Exception e){
+                    Log.e(TAG, "COnnect error");
+                }
                 socket.connect();
                 // Receiving an object
                 socket.on("Poke.poke", new Emitter.Listener() {
@@ -128,19 +128,6 @@ public class GcmIntentService extends IntentService {
 
 
 
-//                try {
-//                    new AsyncTask<Void, Void, String>() {
-//
-//                        @Override
-//                        protected String doInBackground(Void... params) {
-//
-//                            return null;
-//                        }
-//                    }.execute(null, null, null);
-//
-//                }catch (Exception e){
-//                    Log.d(TAG, e.getMessage());
-//                }
 
                 sendNotification("Poke from: " + extras.getString("to"));
                 Log.i(TAG, "Received: " + extras.toString());

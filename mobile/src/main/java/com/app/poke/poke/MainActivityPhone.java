@@ -198,7 +198,7 @@ public class MainActivityPhone extends ActionBarActivity
                     //SOCKET CODE
                     // Sending an object
                     JSONObject obj = new JSONObject();
-                    obj.put("to","haemp");
+                    obj.put("to", PokeConfig.TO_ID);
                     socket.emit("Poke.poke", obj);
 
 

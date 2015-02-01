@@ -4,20 +4,12 @@
     android:layout_height="match_parent" tools:context=".MainActivityWear"
     tools:deviceIds="wear_round">
 
-    <TextView android:id="@+id/text" android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/hello_round"
-        android:layout_marginTop="52dp"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true" />
-
     <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Record"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:text="Touch from Afar"
         android:id="@+id/btnRecord"
-        android:layout_below="@+id/text"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="36dp" />
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true" />
 
 </RelativeLayout>

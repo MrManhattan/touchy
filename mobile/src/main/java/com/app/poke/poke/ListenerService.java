@@ -1,5 +1,10 @@
 package com.app.poke.poke;
 
+import android.database.DataSetObserver;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ListAdapter;
 import android.widget.Toast;
 
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -19,7 +24,6 @@ import java.util.concurrent.TimeUnit;
     @Override
     public void onMessageReceived(MessageEvent messageEvent) {
         nodeId = messageEvent.getSourceNodeId();
-
     }
 
     private void reply(String message) {

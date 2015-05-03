@@ -22,8 +22,11 @@ import android.widget.TextView;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
+import com.google.android.gms.wearable.Channel;
+import com.google.android.gms.wearable.ChannelApi;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
@@ -39,10 +42,13 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.w3c.dom.Node;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
@@ -115,6 +121,9 @@ public class MainActivityPhone extends ActionBarActivity
             }
         });
 
+
+        final byte micData[] = new byte[2048];
+
         /********** Connect to GAC - will end up in connected or failed handler ************/
         mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .addApi(Wearable.API)
@@ -128,6 +137,77 @@ public class MainActivityPhone extends ActionBarActivity
             Log.i(TAG, "GAC ok. Trying to connect...");
             mGoogleApiClient.connect();
         }
+        new AsyncTask<Void, Void, String>() {
+
+            @Override
+            protected String doInBackground(Void... params) {
+                Collection<String> nodes = getNodes();
+                String nodeid = nodes.iterator().next();
+                Log.d(TAG, "Node id: " + nodeid);
+                //-------- TODO Open channel-----------
+                PendingResult<ChannelApi.OpenChannelResult> pendingResult = Wearable.ChannelApi.openChannel(mGoogleApiClient, nodeid, "test_id");
+/*
+                Wearable.ChannelApi.addListener(mGoogleApiClient,new ChannelApi.ChannelListener() {
+                    @Override
+                    public void onChannelOpened(Channel channel) {
+                        System.out.print(micData);
+                    }
+
+                    @Override
+                    public void onChannelClosed(Channel channel, int i, int i2) {
+                        System.out.print(micData);
+                    }
+
+                    @Override
+                    public void onInputClosed(Channel channel, int i, int i2) {
+                        System.out.print(micData);
+                    }
+
+                    @Override
+                    public void onOutputClosed(Channel channel, int i, int i2) {
+                        System.out.print(micData);
+                    }
+                });*/
+                pendingResult.setResultCallback(new ResultCallback<ChannelApi.OpenChannelResult>() {
+
+                    @Override
+                    public void onResult(ChannelApi.OpenChannelResult openChannelResult) {
+                        final Channel channel = openChannelResult.getChannel();
+                        System.out.println("Channel open");
+
+                       channel.getInputStream(mGoogleApiClient).setResultCallback(new ResultCallback<Channel.GetInputStreamResult>() {
+                            @Override
+                            public void onResult(Channel.GetInputStreamResult getInputStreamResult) {
+
+                                try {
+                                    BufferedReader br = new BufferedReader(new InputStreamReader(getInputStreamResult.getInputStream()));
+                                    while(true){
+                                        System.out.println("Before read");
+                                       //String var = br.readLine();
+                                        //System.out.println(var);
+
+
+                                        while(getInputStreamResult.getInputStream().available()>0){
+                                            getInputStreamResult.getInputStream().skip(1);
+                                        }
+                                       // getInputStreamResult.getInputStream().read(micData,0,1);
+                                       // System.out.println(micData);
+                                        System.out.println("After read");
+                                    }
+
+
+                                } catch (Exception e) {
+                                    System.out.println(e.toString());
+                                }
+
+
+                            }
+                        });
+                    }
+                });
+                return null;
+            }
+        }.execute(null, null, null);
 
         // Figure out what IP we're on
         WifiManager wm = (WifiManager) getSystemService(WIFI_SERVICE);

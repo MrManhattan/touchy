@@ -213,8 +213,8 @@ public class MainActivityPhone extends ActionBarActivity
         WifiManager wm = (WifiManager) getSystemService(WIFI_SERVICE);
         String ip = Formatter.formatIpAddress(wm.getConnectionInfo().getIpAddress());
 
-        // start the server
-        System.out.println(ip);
+        System.out.println("This clients IP: "+ip);
+        // start the server to listen for incomming audio files
         new Thread(new StartServerThread(this, ip)).start();
 
         // Connect to server to send information

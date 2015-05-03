@@ -14,12 +14,14 @@ import android.widget.TextView;
 
 
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.AbstractPendingResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import java.util.Collection;
 import java.util.HashSet;
 
 import com.google.android.gms.common.api.PendingResult;
-import com.google.android.gms.common.api.Status;
+import com.google.android.gms.common.api.Result;
+import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.wearable.Channel;
 import com.google.android.gms.wearable.ChannelApi;
 import com.google.android.gms.wearable.MessageApi;
@@ -83,8 +85,9 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
                                             String nodeid = nodes.iterator().next();
                                             Log.d(TAG, "Node id: " + nodeid);
 
-                                            //-------- TODO Open channel-----------
-                                            Wearable.ChannelApi.openChannel(mGoogleApiClient,nodeid,"test_id");
+
+
+
 
                                             return null;
                                         }
@@ -114,6 +117,25 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
                                             Log.d(TAG, "Node id: " + nodeid);
 
                                             //--------TODO CLOSE CHANNEL-----------
+                                            //-------- TODO Open channel-----------
+                                            PendingResult<ChannelApi.OpenChannelResult> pendingResult = Wearable.ChannelApi.openChannel(mGoogleApiClient, nodeid, "test_id");
+                                            pendingResult.setResultCallback(new ResultCallback<ChannelApi.OpenChannelResult>() {
+                                                @Override
+                                                public void onResult(ChannelApi.OpenChannelResult openChannelResult) {
+                                                    Channel channel = openChannelResult.getChannel();
+                                                    channel.getOutputStream(mGoogleApiClient).setResultCallback(new ResultCallback<Channel.GetOutputStreamResult>() {
+                                                        @Override
+                                                        public void onResult(Channel.GetOutputStreamResult getOutputStreamResult) {
+                                                            byte bData[] = short2byte(sData);
+                                                            try {
+                                                                getOutputStreamResult.getOutputStream().write( bData );
+                                                            }catch (Exception e){}
+
+
+                                                        }
+                                                    });
+                                                }
+                                            });
 
 
 
@@ -133,7 +155,18 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
             }
         });
     }
+    //convert short to byte
+    private byte[] short2byte(short[] sData) {
+        int shortArrsize = sData.length;
+        byte[] bytes = new byte[shortArrsize * 2];
+        for (int i = 0; i < shortArrsize; i++) {
+            bytes[i * 2] = (byte) (sData[i] & 0x00FF);
+            bytes[(i * 2) + 1] = (byte) (sData[i] >> 8);
+            sData[i] = 0;
+        }
+        return bytes;
 
+    }
     /**
      * Goes through connected devices and returns them
      * Used in sending message between wearable and phone

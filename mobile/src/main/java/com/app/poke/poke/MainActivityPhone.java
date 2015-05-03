@@ -21,8 +21,11 @@ import com.github.nkzawa.socketio.client.Socket;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
+import com.google.android.gms.wearable.ChannelApi;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
@@ -163,6 +166,31 @@ public class MainActivityPhone extends ActionBarActivity
             Log.i(TAG, "GAC ok. Trying to connect...");
             mGoogleApiClient.connect();
         }
+
+        ChannelApi mChannelAPI = new ChannelApi() {
+            @Override
+            public PendingResult<OpenChannelResult> openChannel(GoogleApiClient googleApiClient, String s, String s2) {
+                return null;
+            }
+
+            @Override
+            public PendingResult<Status> addListener(GoogleApiClient googleApiClient, ChannelListener channelListener) {
+                return null;
+            }
+
+            @Override
+            public PendingResult<Status> removeListener(GoogleApiClient googleApiClient, ChannelListener channelListener) {
+                return null;
+            }
+        };
+
+        Collection<String> nodes = getNodes();
+        String nodeid = nodes.iterator().next();
+        mChannelAPI.openChannel(mGoogleApiClient,nodeid,"test_id");
+
+
+
+
         /********** Register for google play ************/
         if( checkPlayServices() ){
             gcm = GoogleCloudMessaging.getInstance(this);
@@ -260,12 +288,20 @@ public class MainActivityPhone extends ActionBarActivity
      * @return Collection<String>
      */
     public static Collection<String> getNodes() {
-        HashSet<String> results = new HashSet<String>();
-        NodeApi.GetConnectedNodesResult nodes =
-                Wearable.NodeApi.getConnectedNodes(mGoogleApiClient).await();
-        for (com.google.android.gms.wearable.Node node : nodes.getNodes()) {
-            results.add(node.getId());
-        }
+        Collection<String> results;
+        new AsyncTask<Void, Void, String>() {
+            @Override
+            protected String doInBackground(Void... params) {
+                HashSet<String> results = new HashSet<String>();
+                NodeApi.GetConnectedNodesResult nodes =
+                        Wearable.NodeApi.getConnectedNodes(mGoogleApiClient).await();
+                for (com.google.android.gms.wearable.Node node : nodes.getNodes()) {
+                    results.add(node.getId());
+                }
+
+            }
+        }.execute(null, null, null);
+
         return results;
     }
 

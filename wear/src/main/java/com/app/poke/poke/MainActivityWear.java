@@ -1,6 +1,7 @@
 package com.app.poke.poke;
 
 import android.app.Activity;
+import android.net.wifi.p2p.WifiP2pManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Vibrator;
@@ -35,6 +36,8 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
     private TextView mTextView;
     public GoogleApiClient mGoogleApiClient;
     private boolean VIBRATE = false;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -119,6 +122,7 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
      */
     public void sendPokeStartMessage(String nodeId) {
         Log.d(TAG, "Inside startMessage()");
+
         Wearable.MessageApi.sendMessage(
                 mGoogleApiClient, nodeId, "start", new byte[0]).setResultCallback(
                 new ResultCallback<MessageApi.SendMessageResult>() {

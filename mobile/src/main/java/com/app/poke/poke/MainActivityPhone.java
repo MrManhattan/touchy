@@ -5,19 +5,20 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.ActionBarActivity;
 import android.test.suitebuilder.annotation.Suppress;
+import android.text.format.Formatter;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
-import com.github.nkzawa.emitter.Emitter;
-import com.github.nkzawa.socketio.client.Ack;
-import com.github.nkzawa.socketio.client.IO;
-import com.github.nkzawa.socketio.client.Socket;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -38,11 +39,20 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.w3c.dom.Node;
 
+import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.net.Socket;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.util.Collection;
+
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
+
 
 /**
  * Created by staefy on 31/01/15.
@@ -60,15 +70,18 @@ public class MainActivityPhone extends ActionBarActivity
     private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
     public static final String TAG = "GCM Android";
     public static final String START_ACTIVITY_PATH = "/start/MainActivity";
+
+
+
     /**********Globals************/
-    GoogleCloudMessaging gcm;
-    AtomicInteger msgId = new AtomicInteger();
-    SharedPreferences prefs;
     Context context;
-    String regid;
+
+    Handler uiThreadHandler = new Handler();
     TextView textView;
     public static GoogleApiClient mGoogleApiClient;
     Socket socket;
+    String response;
+    Button btnNotify;
 
     /**********"Phone Main" - Connect to GCM and GAC************/
     @Override
@@ -76,108 +89,56 @@ public class MainActivityPhone extends ActionBarActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main_activity_phone);
 
-
-
-        /**********SOCKET CODE ************/
-        IO.Options opts = new IO.Options();
-        //opts.forceNew = true;
-       // opts.reconnection = false;
-
-        try {
-            socket = IO.socket(PokeConfig.SOCKET_IP, opts);
-            socket.on(Socket.EVENT_CONNECT, new Emitter.Listener() {
-
-            @Override
-            public void call(Object... args) {
-                try {
-                    JSONObject o;
-                    o = new JSONObject("{\"from\": \""+PokeConfig.CLIENT_ID+"\" }");
-                    Log.i(TAG, "Setting up JSON object "+o.toString());
-                    socket.emit("Poke.ready", o);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                //socket.disconnect();
-            }
-
-        }).on("event", new Emitter.Listener() {
-
-            @Override
-            public void call(Object... args) {
-            }
-
-        }).on(Socket.EVENT_DISCONNECT, new Emitter.Listener() {
-
-            @Override
-            public void call(Object... args) {}
-
-        }).on("Poke.poke", new Emitter.Listener() {
-                @Override
-                public void call(Object... args) {
-                    Log.d(TAG, "Incomming poke");
-                    try {
-                        JSONObject obj = (JSONObject) args[0];
-                        if(obj.getString("to").equals(PokeConfig.CLIENT_ID)){
-                            //Take server message and forward to watch (first node FIXME: more nodes?
-                            Collection<String> nodes = MainActivityPhone.getNodes();
-                            String nodeid = nodes.iterator().next();
-                            Log.d(TAG, "Node id: "+nodeid);
-
-                            if(obj.getString("status").equals("start")){
-                                MainActivityPhone.sendPokedStartMessage(nodeid);
-
-                            }else if(obj.getString("status").equals("stop")){
-                                MainActivityPhone.sendPokedStopMessage(nodeid);
-                            }
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
-            Log.i(TAG, "Connecting to socket");
-            socket.connect(); //After connect we send a touch object
-
-        }catch(Exception e){
-            Log.i(TAG, "Receive/Send/Socket ERROR!!");
-        }
-
-
-
-
-
-
-
         /********** Init globals ************/
         context = getApplicationContext();
         textView = (TextView) findViewById(R.id.textView);
+        btnNotify = (Button) findViewById(R.id.btnNotify);
+
+
+
+        btnNotify.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+
+                try{
+                    System.out.println("Write to socket...");
+                    PrintWriter out = new PrintWriter(
+                        new BufferedWriter(
+                            new OutputStreamWriter(socket.getOutputStream()
+                        )
+                    ), true);
+
+                    out.println("Hej");
+                    System.out.println("After writing to socket...");
+                }catch(Exception e){
+
+                }
+            }
+        });
+
         /********** Connect to GAC - will end up in connected or failed handler ************/
         mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .addApi(Wearable.API)
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
                 .build();
+
         if(mGoogleApiClient == null){
             Log.i(TAG, "GAC null, connect will fail");
         }else{
             Log.i(TAG, "GAC ok. Trying to connect...");
             mGoogleApiClient.connect();
         }
-        /********** Register for google play ************/
-        if( checkPlayServices() ){
-            gcm = GoogleCloudMessaging.getInstance(this);
-            regid = getRegistrationId(context);
-            Log.i(TAG, "Registration ID is" + regid);
 
-            if (regid.isEmpty()) {
-                registerInBackground();
-            }else{
-                textView.append("GCM initiated");
-            }
-        } else {
-            Log.i(TAG, "No valid Google Play Services APK found.");
-        }
+        // Figure out what IP we're on
+        WifiManager wm = (WifiManager) getSystemService(WIFI_SERVICE);
+        String ip = Formatter.formatIpAddress(wm.getConnectionInfo().getIpAddress());
 
+        // start the server
+        System.out.println(ip);
+        new Thread(new StartServerThread(this, ip)).start();
+
+        // Connect to server to send information
+        new Thread(new ConnectToSocket(this)).start();
     }
 
     /********** Communicating pokes with wearable************/
@@ -221,36 +182,7 @@ public class MainActivityPhone extends ActionBarActivity
 
     @Override //Forward poke to server
     public void onMessageReceived(final MessageEvent messageEvent) {
-        Log.d(TAG, "MessageEvent: " + messageEvent.getData().toString());
-        //Send the poke to server
-        new AsyncTask<Void, Void, String>() {
-            @Override
-            protected String doInBackground(Void... params) {
-                String msg = "";
-                try {
-                    //SOCKET CODE
-                    // Sending an object
-                    JSONObject obj = new JSONObject();
-                    obj.put("to", PokeConfig.TO_ID);
-                    if(messageEvent.getPath().equals("start")){
-                        obj.put("status","start");
-                    }else if(messageEvent.getPath().equals("stop")){
-                        obj.put("status","stop");
-                    }
-                    socket.emit("Poke.poke", obj);
 
-
-                    Bundle data = new Bundle();
-                    data.putString("to", PokeConfig.TO_ID);
-                    String id = Integer.toString(msgId.incrementAndGet());
-                    //gcm.send(PokeConfig.SENDER_ID + "@gcm.googleapis.com", id, data);
-                    msg = "Server call sent.";
-                } catch (Exception ex) {
-                    msg = "Server call not sent. Error :" + ex.getMessage();
-                }
-                return msg;
-            }
-        }.execute(null, null, null);
 
     }
     /**
@@ -324,7 +256,6 @@ public class MainActivityPhone extends ActionBarActivity
         Log.i(TAG, "in onResume()");
         super.onStart();
         mGoogleApiClient.connect();
-        checkPlayServices();
     }
 
     @Override
@@ -337,145 +268,6 @@ public class MainActivityPhone extends ActionBarActivity
     public void onConnectionFailed(ConnectionResult connectionResult) {
         Log.i(TAG, "GAC.connect() FAILED!");
     }
-
-    /********** Private helpers for GCM *********************/
-    private boolean checkPlayServices() {
-        int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
-        if (resultCode != ConnectionResult.SUCCESS) {
-            if (GooglePlayServicesUtil.isUserRecoverableError(resultCode)) {
-                GooglePlayServicesUtil.getErrorDialog(resultCode, this,
-                        PLAY_SERVICES_RESOLUTION_REQUEST).show();
-            } else {
-                Log.i(TAG, "This device is not supported.");
-                finish();
-            }
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Fetches registration ID for this user from the shared preferences
-     * @param context
-     * @return
-     */
-    private String getRegistrationId(Context context) {
-        final SharedPreferences prefs = getGCMPreferences(context);
-        String registrationId = prefs.getString(PROPERTY_REG_ID, "");
-        if (registrationId.isEmpty()) {
-            Log.i(TAG, "Registration not found.");
-            return "";
-        }
-        // Check if app was updated; if so, it must clear the registration ID
-        // since the existing regID is not guaranteed to work with the new
-        // app version.
-        int registeredVersion = prefs.getInt(PROPERTY_APP_VERSION, Integer.MIN_VALUE);
-        int currentVersion = getAppVersion(context);
-        if (registeredVersion != currentVersion) {
-            Log.i(TAG, "App version changed.");
-            return "";
-        }
-        return registrationId;
-    }
-
-    /**
-     * @return Application's {@code SharedPreferences}.
-     */
-    private SharedPreferences getGCMPreferences(Context context) {
-        // This sample app persists the registration ID in shared preferences, but
-        // how you store the regID in your app is up to you.
-        return getSharedPreferences(MainActivityPhone.class.getSimpleName(),
-                Context.MODE_PRIVATE);
-    }
-
-    /**
-     * @return Application's version code from the {@code PackageManager}.
-     */
-    private static int getAppVersion(Context context) {
-        try {
-            PackageInfo packageInfo = context.getPackageManager()
-                    .getPackageInfo(context.getPackageName(), 0);
-            return packageInfo.versionCode;
-        } catch (PackageManager.NameNotFoundException e) {
-            // should never happen
-            throw new RuntimeException("Could not get package name: " + e);
-        }
-    }
-
-    /**
-     * Registers the application with GCM servers asynchronously.
-     * <p>
-     * Stores the registration ID and app versionCode in the application's
-     * shared preferences.
-     */
-    private void registerInBackground() {
-        new AsyncTask<Void, Void, String>() {
-
-            @Override
-            protected String doInBackground(Void... params) {
-                String msg = "";
-                try {
-                    if (gcm == null) {
-                        gcm = GoogleCloudMessaging.getInstance(context);
-                    }
-                    regid = gcm.register(PokeConfig.SENDER_ID);
-                    msg = "Device registered, registration ID=" + regid;
-
-                    // You should send the registration ID to your server over HTTP,
-                    // so it can use GCM/HTTP or CCS to send messages to your app.
-                    // The request to your server should be authenticated if your app
-                    // is using accounts.
-                    sendRegistrationIdToBackend();
-
-                    // Persist the regID - no need to register again.
-                    storeRegistrationId(context, regid);
-                } catch (IOException ex) {
-                    msg = "Error :" + ex.getMessage();
-                    // If there is an error, don't just keep trying to register.
-                    // Require the user to click a button again, or perform
-                    // exponential back-off.
-                }
-                return msg;
-            }
-
-            @Override
-            protected void onPostExecute(String msg) {
-                textView.append(msg + "\n");
-            }
-        }.execute(null, null, null);
-
-    }
-
-    /**
-     * Sends the registration ID to your server over HTTP, so it can use GCM/HTTP
-     * or CCS to send messages to your app. Not needed for this demo since the
-     * device sends upstream messages to a server that echoes back the message
-     * using the 'from' address in the message.
-     */
-    private void sendRegistrationIdToBackend() {
-        // Your implementation here.
-    }
-
-    /**
-     * Stores the registration ID and app versionCode in the application's
-     * {@code SharedPreferences}.
-     *
-     * @param context application's context.
-     * @param regId registration ID
-     */
-    private void storeRegistrationId(Context context, String regId) {
-        final SharedPreferences prefs = getGCMPreferences(context);
-        int appVersion = getAppVersion(context);
-        Log.i(TAG, "Saving regId on app version " + appVersion);
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putString(PROPERTY_REG_ID, regId);
-        editor.putInt(PROPERTY_APP_VERSION, appVersion);
-        editor.commit();
-    }
-
-
-
-
 
 
 

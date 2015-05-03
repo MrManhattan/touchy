@@ -35,11 +35,10 @@ class StartServerThread implements Runnable {
                 incommingSocket = socket.accept();
                 System.out.println("Server: Connection found");
                 InputStream in = incommingSocket.getInputStream();
-                BufferedReader br = new BufferedReader(new InputStreamReader(in));
-                String line = br.readLine();
-                System.out.println("Server: Response from client: "+line);
 
-                main.uiThreadHandler.post(new UpdateUIThread(line));
+                //main.uiThreadHandler.post(new UpdateUIThread(line));
+
+                new Thread(new ReadInput(in)).start();
             }
 
         }catch(Exception e){
@@ -58,5 +57,28 @@ class StartServerThread implements Runnable {
         public void run(){
             main.textView.setText(this.message);
         }
+    }
+
+    class ReadInput implements Runnable{
+
+        InputStream in;
+
+        ReadInput(InputStream in){
+            this.in = in;
+        }
+
+        public void run(){
+            BufferedReader br = new BufferedReader(new InputStreamReader(this.in));
+
+            while(true){
+                try{
+                    String line = br.readLine();
+                    System.out.println("Server: Response from client: "+line);
+                }catch(Exception e){
+                    System.out.println(e.toString());
+                }
+            }
+        }
+
     }
 }

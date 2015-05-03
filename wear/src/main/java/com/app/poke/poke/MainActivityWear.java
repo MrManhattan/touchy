@@ -36,22 +36,6 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
     public static final String TAG = "GCM Android";
     private TextView mTextView;
     public GoogleApiClient mGoogleApiClient;
-    public static final ChannelApi mChannelApi = new ChannelApi() {
-        @Override
-        public PendingResult<OpenChannelResult> openChannel(GoogleApiClient googleApiClient, String s, String s2) {
-            return null;
-        }
-
-        @Override
-        public PendingResult<Status> addListener(GoogleApiClient googleApiClient, ChannelListener channelListener) {
-            return null;
-        }
-
-        @Override
-        public PendingResult<Status> removeListener(GoogleApiClient googleApiClient, ChannelListener channelListener) {
-            return null;
-        }
-    };
 
 
     @Override
@@ -100,8 +84,7 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
                                             Log.d(TAG, "Node id: " + nodeid);
 
                                             //-------- TODO Open channel-----------
-                                            mChannelApi.openChannel(mGoogleApiClient,nodeid,"test_id");
-
+                                            Wearable.ChannelApi.openChannel(mGoogleApiClient,nodeid,"test_id");
 
                                             return null;
                                         }
@@ -118,7 +101,6 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
                                     audio.stop();
                                     int numberOfShorts = audio.read(sData, 0, 1024);
                                     for(int i = 0; i < numberOfShorts; i++){
-
                                        // dataOutputStream.writeShort(audioData[i]);
                                     }
                                     audio.release();

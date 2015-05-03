@@ -16,6 +16,11 @@ import android.widget.TextView;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.AbstractPendingResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+
+import java.io.BufferedWriter;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.HashSet;
 
@@ -123,12 +128,30 @@ public class MainActivityWear extends Activity implements GoogleApiClient.Connec
                                                 @Override
                                                 public void onResult(ChannelApi.OpenChannelResult openChannelResult) {
                                                     Channel channel = openChannelResult.getChannel();
+                                                    System.out.println("Channel open");
                                                     channel.getOutputStream(mGoogleApiClient).setResultCallback(new ResultCallback<Channel.GetOutputStreamResult>() {
                                                         @Override
                                                         public void onResult(Channel.GetOutputStreamResult getOutputStreamResult) {
                                                             byte bData[] = short2byte(sData);
                                                             try {
-                                                                getOutputStreamResult.getOutputStream().write( bData );
+                                                                OutputStream Ostream = getOutputStreamResult.getOutputStream();
+
+                                                                bData[0]= 66;
+
+                                                                System.out.println("Before write");
+                                                                PrintWriter out = new PrintWriter(
+                                                                    new BufferedWriter(
+                                                                            new OutputStreamWriter(Ostream )
+                                                                    ), true);
+
+                                                                out.println("Hej");
+                                                                out.flush();
+                                                                    System.out.println("Flushing");
+
+                                                                    System.out.println("After neew write");
+
+
+
                                                             }catch (Exception e){}
 
 
